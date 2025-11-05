@@ -382,6 +382,19 @@ service apache2 start
 service rabbitmq-server start || true # Don't crash if rabbitmq-server didn't start
 
 touch /ktd_ready
+
+# Run any custom startup scripts
+if [ -d "/startup_scripts" ]; then
+    echo "[startup_scripts] Running custom startup scripts"
+    for script in /startup_scripts/*.sh; do
+        if [ -f "$script" ] && [ -x "$script" ]; then
+            echo "    [*] Executing: $(basename $script)"
+            bash "$script" || echo "    [x] Error executing $(basename $script)"
+        fi
+    done
+    echo "    [*] Startup scripts completed"
+fi
+
 echo "koha-testing-docker has started up and is ready to be enjoyed!"
 
 # if KOHA_PROVE_CPUS is not set, then use nproc

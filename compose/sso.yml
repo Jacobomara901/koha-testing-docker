@@ -8,12 +8,24 @@ services:
         environment:
             KEYCLOAK_ADMIN: ${KEYCLOAK_USER:-keycloak}
             KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_PASS:-keycloak}
+            KC_HTTP_ENABLED: 'true'
+            KC_PROXY: 'edge'
+            KC_HOSTNAME: localhost
+            KC_PROXY_HEADERS: "xforwarded"
+
+        volumes:
+            - ${KTD_HOME}/sso/realm:/opt/keycloak/data/import:ro
 
         command:
             - start-dev
-            - --proxy=edge
-            - --http-port=8082  
+            - --http-port=8082
             - --http-relative-path=/auth
+            - --import-realm
 
         ports:
             - 8082:8082
+
+    koha:
+        volumes:
+            - ${KTD_HOME}/sso/sso.sh:/startup_scripts/sso.sh
+            - ${KTD_HOME}/sso/koha:/sso_configs
