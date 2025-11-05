@@ -48,8 +48,39 @@ else
     echo "    [*] Shibboleth configuration for Intranet already present"
 fi
 
-echo "[SSO] Restarting Apache"
-service apache2 restart
+echo "[SSO] Configuring Koha Shibboleth settings"
+koha-mysql kohadev <<EOF
+-- Enable Shibboleth authentication
+UPDATE systempreferences SET value = '1' WHERE variable = 'ShibbolethAuthentication';
+
+-- Set base URLs
+UPDATE systempreferences SET value = 'http://localhost:8080' WHERE variable = 'OPACBaseURL';
+UPDATE systempreferences SET value = 'http://localhost:8081' WHERE variable = 'staffClientBaseURL';
+
+-- Configure Shibboleth autocreate
+INSERT INTO shibboleth_config (autocreate, sync, welcome, force_opac_sso, force_staff_sso)
+VALUES (1, 1, 0, 0, 0)
+ON DUPLICATE KEY UPDATE autocreate = 1, sync = 1;
+
+-- Add default field mappings
+INSERT INTO shibboleth_field_mappings (idp_field, koha_field, is_matchpoint, default_content)
+VALUES
+    ('email', 'userid', 1, NULL),
+    ('surname', 'surname', 0, NULL),
+    ('givenName', 'firstname', 0, NULL),
+    (NULL, 'branchcode', 0, 'CPL'),
+    (NULL, 'categorycode', 0, 'S')
+ON DUPLICATE KEY UPDATE
+    idp_field = VALUES(idp_field),
+    is_matchpoint = VALUES(is_matchpoint),
+    default_content = VALUES(default_content);
+EOF
+
+echo "    [*] Shibboleth settings configured in Koha"
+
+echo "[SSO] Restarting services"
 service shibd restart
+service apache2 restart
+flush_memcached
 
 echo "[SSO] Shibboleth SP setup complete"
