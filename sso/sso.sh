@@ -14,8 +14,8 @@ for config_file in /sso_configs/*; do
     fi
 done
 
-echo "[SSO] Configuring Apache for Shibboleth on OPAC"
 APACHE_CONF="/etc/apache2/sites-enabled/kohadev.conf"
+echo "[SSO] Configuring Apache for Shibboleth on OPAC"
 
 if ! grep -q "AuthType shibboleth" "$APACHE_CONF"; then
     sed -i '/<VirtualHost \*:8080>/,/<\/VirtualHost>/ {
@@ -28,7 +28,24 @@ if ! grep -q "AuthType shibboleth" "$APACHE_CONF"; then
     }' "$APACHE_CONF"
     echo "    [*] Added Shibboleth configuration to OPAC VirtualHost"
 else
-    echo "    [*] Shibboleth configuration already present"
+    echo "    [*] Shibboleth configuration for OPAC already present"
+fi
+
+echo "[SSO] Configuring Apache for Shibboleth on Intranet"
+
+if ! grep -q "ShibRequestSetting applicationId kohadev-intra" "$APACHE_CONF"; then
+    sed -i '/<VirtualHost \*:8081>/,/<\/VirtualHost>/ {
+        /<\/VirtualHost>/i\    <Location "/">\
+    ShibRequestSetting applicationId kohadev-intra\
+    AuthType shibboleth\
+    Require shibboleth\
+    ShibUseEnvironment Off\
+    ShibUseHeaders On\
+    </Location>
+    }' "$APACHE_CONF"
+    echo "    [*] Added Shibboleth configuration to Intranet VirtualHost"
+else
+    echo "    [*] Shibboleth configuration for Intranet already present"
 fi
 
 echo "[SSO] Restarting Apache"
